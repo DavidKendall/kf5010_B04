@@ -235,7 +235,7 @@ See \href{http://cgweb1.northumbria.ac.uk/SubjectAreaResources/embedded/micrium/
 static void appTaskLED2(void *pdata) {
   while (true) {                
     OSTimeDlyHMSM(0,0,0,500);   
-    ledToggle(LED2);
+    gpioPinToggle(&pin[LED2]);
   } 
 }
 \end{lstlisting}
@@ -368,79 +368,38 @@ for some period of time
 
 \lstset{basicstyle=\tiny}
 
+
 \begin{frame}[fragile]
 \frametitle{Complete example}
 
 \begin{lstlisting}
 #include <stdbool.h>
 #include <ucos_ii.h>
-#include <osutils.h>
-#include <bsp.h>
-#include <leds.h>
+#include "gpioPin.h"
 
-/*
-********************************************************************************
-*                            APPLICATION TASK PRIORITIES
-********************************************************************************
-*/
-
-enum {
+typedef enum {
   APP_TASK_LED1_PRIO = 4,
-  APP_TASK_LED2_PRIO 
-};
+  APP_TASK_LED2_PRIO
+} taskPriorities_t;
 
-/*
-********************************************************************************
-*                            APPLICATION TASK STACKS
-********************************************************************************
-*/
-
-enum {
+typedef enum {
   APP_TASK_LED1_STK_SIZE = 256,
-  APP_TASK_LED2_STK_SIZE = 256 
-};
+  APP_TASK_LED2_STK_SIZE = 256
+} stackSizes_t;
 
 static OS_STK appTaskLED1Stk[APP_TASK_LED1_STK_SIZE];
 static OS_STK appTaskLED2Stk[APP_TASK_LED2_STK_SIZE];
-\end{lstlisting}
-
-\end{frame}
-
-
-\begin{frame}[fragile]
-\frametitle{Complete example}
-
-\begin{lstlisting}
-/*
-********************************************************************************
-*                            APPLICATION FUNCTION PROTOTYPES
-********************************************************************************
-*/
 
 static void appTaskLED1(void *pdata);
 static void appTaskLED2(void *pdata);
 
-/*
-********************************************************************************
-*                            GLOBAL FUNCTION DEFINITIONS
-********************************************************************************
-*/
-int main() {
+typedef enum {
+	LED1 = 0,
+	LED2
+} deviceNames_t;
 
-  /* Initialise the board support package and the OS */
-  bspInit();
-  OSInit();                                                   
+gpioPin_t pin[2];
 
-  /* Create the tasks */
-  OSTaskCreate(appTaskLED1,                               
-               (void *)0,
-               (OS_STK *)&appTaskLED1Stk[APP_TASK_LED1_STK_SIZE - 1],
-               APP_TASK_LED1_PRIO);
-  
-  OSTaskCreate(appTaskLED2,                               
-               (void *)0,
-               (OS_STK *)&appTaskLED2Stk[APP_TASK_LED2_STK_SIZE - 1],
-               APP_TASK_LED2_PRIO);
 \end{lstlisting}
 
 \end{frame}
@@ -449,33 +408,55 @@ int main() {
 \frametitle{Complete example}
 
 \begin{lstlisting}
+int main() {
+
+  /* Initialise the GPIO pins */
+  gpioPinInit(&pin[LED1], 1, 18, OUTPUT_PIN);
+  gpioPinInit(&pin[LED2], 0, 13, OUTPUT_PIN);
+
+  /* Initialise the OS */
+  OSInit();                                                  
+
+  /* Create the tasks */
+  OSTaskCreate(appTaskLED1,                              
+               (void *)0,
+               (OS_STK *)&appTaskLED1Stk[APP_TASK_LED1_STK_SIZE - 1],
+               APP_TASK_LED1_PRIO);
+ 
+  OSTaskCreate(appTaskLED2,                              
+               (void *)0,
+               (OS_STK *)&appTaskLED2Stk[APP_TASK_LED2_STK_SIZE - 1],
+               APP_TASK_LED2_PRIO);
+
+ 
   /* Start the OS */
-  OSStart();                                                  
-  
-  /* Should never arrive here */ 
-  return 0;      
+  OSStart();                                                 
+ 
+  /* Should never arrive here */
+  return 0;     
 }
-/*
-*********************************************************************************
-*                             APPLICATION TASK DEFINITIONS
-*********************************************************************************
-*/
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Complete example}
+  \begin{lstlisting}
 static void appTaskLED1(void *pdata) {
   /* Start the OS ticker -- must be done in the highest priority task */
-  osStartTick();
-  
+  SysTick_Config(SystemCoreClock / OS_TICKS_PER_SEC);
+ 
   /* Task main loop */
   while (true) {
-    ledToggle(LED1);
+    gpioPinToggle(&pin[LED1]);
     OSTimeDlyHMSM(0,0,0,500);
   }
 }
 
 static void appTaskLED2(void *pdata) {
   while (true) {
+    gpioPinToggle(&pin[LED2]);
     OSTimeDlyHMSM(0,0,0,500);
-    ledToggle(LED2);
-  } 
+  }
 }
 \end{lstlisting}
 
